@@ -1,38 +1,58 @@
 #!/bin/bash
 
-EMPTYFILE_PATH="$(dirname -- $0)/empty-file.usm"
-STEAMAPPS_DIR="${HOME}/.steam/steam/steamapps"
-TEKKEN_DIR="${STEAMAPPS_DIR}/common/TEKKEN 8"
-MOVIES_DIR="${TEKKEN_DIR}/Polaris/Content/Movies/usm"
+emptyfile_path="$(dirname -- $0)/empty-file.usm"
+steamapps_dir="${HOME}/.steam/steam/steamapps"
+tekken_version="8"
 
-MOVIES_SUBDIR=(
-  "CharEpisode"
-  "Gallery"
-  "Lobby"
-  "StartUp"
-  "Story"
-  "StoryChapterSelect"
-  "StoryDLC"
-  "StoryTournament"
-  "TAM"
-  "YellowBook"
-)
-
-while getopts p param; do
+while getopts ':v:p' param; do
   case "${param}" in
-    p) pack_dirs_for_release="TRUE" ;;
+    s) steamapps_dir="$OPTARG" ;;
+    v) tekken_version="$OPTARG" ;;
+    p) create_release_archive="TRUE" ;;
   esac
 done
 
-for subdir in ${MOVIES_SUBDIR[@]}; do
+tekken_dir="${steamapps_dir}/common/TEKKEN ${tekken_version}"
+case "${tekken_version}" in
+  7)
+    movies_dir="${tekken_dir}/TekkenGame/Content/Movies"
+    movies_subdir=(
+      "Gallery"
+      "Story"
+    )
+  ;;
+  8)
+    movies_dir="${tekken_dir}/Polaris/Content/Movies/usm"
+    movies_subdir=(
+      "CharEpisode"
+      "Gallery"
+      "Lobby"
+      "StartUp"
+      "Story"
+      "StoryChapterSelect"
+      "StoryDLC"
+      "StoryTournament"
+      "TAM"
+      "YellowBook"
+    )
+  ;;
+  *)
+    echo "TEKKEN ${tekken_version} is not supported."
+    exit 1;
+  ;;
+esac
+
+echo "Working with TEKKEN ${tekken_version} installed in \"${tekken_dir}\""
+
+for subdir in ${movies_subdir[@]}; do
   echo "Replacing movies in ${subdir}"
-  find "${MOVIES_DIR}/${subdir}" -type f -name "*.usm" \
-    -exec cp "${EMPTYFILE_PATH}" {} \;
+  find "${movies_dir}/${subdir}" -type f -name "*.usm" \
+    -exec cp "${emptyfile_path}" {} \;
 done
 
-if [ "${pack_dirs_for_release}" ]; then
+if [ "${create_release_archive}" ]; then
   echo "Packing altered directories for release"
-  pushd "${MOVIES_DIR}"
-  zip -q -r "$(dirs -l +1)/tekken8-debloater_$(date +'%Y%m%d').zip" ${MOVIES_SUBDIR[@]}
-  popd
+  pushd "${movies_dir}" > /dev/null
+  zip -q -r "$(dirs -l +1)/tekken${tekken_version}-debloater_$(date +'%Y%m%d').zip" ${movies_subdir[@]}
+  popd > /dev/null
 fi
